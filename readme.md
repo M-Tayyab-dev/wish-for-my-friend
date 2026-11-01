@@ -14,8 +14,25 @@ zeera-birthday-site/
 ├── style.css       All the design
 ├── script.js       All the animation and behaviour
 ├── i18n.js         The text in Roman Urdu, English and Urdu
+├── audio/
+│   └── birthday.mp3   Birthday music (plays on every page except the Dua page)
 └── images/         All 15 photos
 ```
+
+## Music and dua audio
+
+**Birthday music.** A music-box version of "Happy Birthday to You" plays on every page except the Dua page. The tune is public domain and this recording was synthesised for the site, so there are no copyright worries. Browsers do not allow sound to start by itself, so the first visit shows a small "Tap anywhere for birthday music" note. After one tap it keeps playing as you move between pages. The round button in the bottom corner turns it on and off, and the site remembers the choice. To use your own song, replace `audio/birthday.mp3` and keep the same name.
+
+**Dua recitation.** Each of the four duas on the Dua page has a **Listen** button. It plays the recitation (Mishary Rashid Alafasy, from EveryAyah.com). The page first looks for a file in the `audio/` folder, then streams from EveryAyah.com if the file is not there. To make the dua page work without the internet, or to be safe if that website changes, download the four files and save them in the `audio/` folder with exactly these names:
+
+| Save as | Verse | Download link |
+| --- | --- | --- |
+| `audio/dua1.mp3` | Al-Baqarah 2:156 | https://everyayah.com/data/Alafasy_128kbps/002156.mp3 |
+| `audio/dua2.mp3` | Ibrahim 14:41 | https://everyayah.com/data/Alafasy_128kbps/014041.mp3 |
+| `audio/dua3.mp3` | Al-Isra 17:24 | https://everyayah.com/data/Alafasy_128kbps/017024.mp3 |
+| `audio/dua4.mp3` | Al-Baqarah 2:153 | https://everyayah.com/data/Alafasy_128kbps/002153.mp3 |
+
+EveryAyah.com offers these recordings for public use. If you plan to share the site widely, check their terms on the website.
 
 Keep every file in the same folder structure. If a file is moved, the page will lose its styling or photos.
 
@@ -82,6 +99,8 @@ Netlify, GitHub Pages and Cloudflare Pages all allow a custom domain, for exampl
 
 - [ ] Every page opens and shows all photos.
 - [ ] Clicking a photo opens it, and Close works.
+- [ ] Birthday music starts after one tap and stops on the Dua page.
+- [ ] Each Listen button on the Dua page plays its recitation.
 - [ ] All three languages work, especially Urdu.
 - [ ] Someone fluent has read the Urdu text and the prayer page.
 - [ ] The photos are ones Zeera and the friends in them are happy to have online.

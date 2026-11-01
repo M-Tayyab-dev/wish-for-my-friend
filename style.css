@@ -360,3 +360,33 @@ html[data-lang="ur"] .light-box p,html[data-lang="ur"] .meaning{line-height:2.1}
 .langfade{animation:lf .55s var(--ease)}
 @keyframes lf{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
 .dua-art{display:block}
+
+/* ===== music toggle + dua players ===== */
+.music{position:fixed;z-index:60;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:2px solid var(--turmeric);background:rgba(37,24,15,.92);backdrop-filter:blur(8px);cursor:pointer;display:grid;place-items:center;transition:background .25s,scale .2s;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.music:hover{scale:1.08}
+.music:active{scale:.94}
+.music.on{background:var(--turmeric)}
+.eq{display:flex;align-items:flex-end;gap:3px;height:20px}
+.eq i{display:block;width:3.5px;height:30%;border-radius:2px;background:var(--turmeric)}
+.music.on .eq i{background:var(--ink);animation:eq .9s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.3s}
+.eq i:nth-child(3){animation-delay:-.6s}
+.eq i:nth-child(4){animation-delay:-.15s}
+@keyframes eq{0%,100%{height:25%}50%{height:100%}}
+.music:not(.on)::after{content:"";position:absolute;width:30px;height:2.5px;border-radius:2px;background:var(--turmeric);rotate:-45deg}
+.music-hint{position:fixed;z-index:60;right:calc(max(16px,env(safe-area-inset-right,0px)) + 66px);bottom:calc(max(16px,env(safe-area-inset-bottom,0px)) + 11px);max-width:calc(100vw - 110px);padding:8px 16px;border-radius:999px;background:var(--turmeric);color:var(--ink);font:600 .85rem/1.5 var(--body);animation:hintIn .6s var(--ease) both,hintBob 2.2s ease-in-out .7s infinite;pointer-events:none}
+@keyframes hintIn{from{opacity:0;translate:14px 0}to{opacity:1;translate:0 0}}
+@keyframes hintBob{0%,100%{translate:0 0}50%{translate:-6px 0}}
+
+.dactions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.dplay{--ic:var(--turmeric);--tc:var(--ink);display:inline-flex;align-items:center;gap:10px;padding:8px 20px 8px 10px;border-radius:999px;border:2px solid var(--turmeric);background:transparent;color:var(--turmeric);font:700 .95rem var(--body);cursor:pointer;transition:background .25s,color .25s,scale .2s}
+.dplay:hover,.dplay[data-state="play"]{--ic:var(--ink);--tc:var(--turmeric);background:var(--turmeric);color:var(--ink)}
+.dplay:active{scale:.96}
+.dplay .pi{position:relative;flex:none;width:28px;height:28px;border-radius:50%;background:var(--ic);transition:background .25s}
+.dplay .pi::before{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent var(--tc);translate:2px 0}
+.dplay[data-state="play"] .pi::before{width:3px;height:12px;border-width:0 3.5px;border-color:var(--tc);translate:0 0}
+.dstatus{color:var(--muted);font-size:.9rem;max-width:36ch}
+.dstatus:empty{display:none}
+html[dir="rtl"] .dplay .pi::before{rotate:180deg;translate:-2px 0}
+html[dir="rtl"] .dplay[data-state="play"] .pi::before{rotate:0deg;translate:0 0}
+html[data-lang="ur"] .music-hint{line-height:1.9}

@@ -382,6 +382,100 @@
     label();
   });
 
+  /* ---------- birthday music (every page except Dua) ---------- */
+  safe(function () {
+    var btn = $('#music');
+    if (!btn) return;
+    var hint = $('#musicHint');
+    var a = new Audio('audio/birthday.mp3');
+    a.loop = true; a.volume = 0.4; a.preload = 'auto';
+    var off = false, wasPlaying = false;
+    try { off = localStorage.getItem('zeera-music') === 'off'; } catch (e) {}
+    try {
+      var t0 = parseFloat(sessionStorage.getItem('zeera-mt') || '0');
+      if (t0 > 0) a.addEventListener('loadedmetadata', function () { try { a.currentTime = t0 % (a.duration || t0 + 1); } catch (e) {} }, { once: true });
+    } catch (e) {}
+    function ui() {
+      var on = !a.paused && !off;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-label', tr(on ? 'm.off' : 'm.on'));
+    }
+    function save() { try { sessionStorage.setItem('zeera-mt', String(a.currentTime || 0)); } catch (e) {} }
+    function remember(v) { try { localStorage.setItem('zeera-music', v); } catch (e) {} }
+    function tryPlay() {
+      if (off) return;
+      var p = a.play();
+      if (p && p.then) p.then(function () { hint.hidden = true; unbind(); ui(); }).catch(function () { hint.hidden = false; ui(); });
+    }
+    function unlock(e) {
+      if (e.target && e.target.closest && e.target.closest('#music')) return;
+      tryPlay();
+    }
+    var evs = ['pointerdown', 'keydown', 'touchstart'];
+    function bind() { evs.forEach(function (n) { d.addEventListener(n, unlock, { passive: true }); }); }
+    function unbind() { evs.forEach(function (n) { d.removeEventListener(n, unlock); }); }
+    btn.addEventListener('click', function () {
+      unbind(); hint.hidden = true;
+      if (a.paused) { off = false; remember('on'); var p = a.play(); if (p && p.catch) p.catch(function () {}); }
+      else { off = true; remember('off'); a.pause(); }
+      ui();
+    });
+    a.addEventListener('play', ui); a.addEventListener('pause', ui);
+    window.addEventListener('pagehide', save);
+    setInterval(save, 2000);
+    d.addEventListener('visibilitychange', function () {
+      if (d.hidden) { wasPlaying = !a.paused; if (wasPlaying) a.pause(); }
+      else if (wasPlaying && !off) { var p = a.play(); if (p && p.catch) p.catch(function () {}); }
+    });
+    d.addEventListener('zeera:lang', ui);
+    bind(); ui(); tryPlay();
+  });
+
+  /* ---------- dua page: recitation players ---------- */
+  safe(function () {
+    var btns = $$('.dplay');
+    if (!btns.length) return;
+    var audio = new Audio(); audio.preload = 'none';
+    var cur = null;
+    function label(b) { $('.dlabel', b).textContent = tr(b.getAttribute('data-state') === 'play' ? 'd.pause' : 'd.play'); }
+    function setState(b, s) { b.setAttribute('data-state', s); b.setAttribute('aria-pressed', s === 'play' ? 'true' : 'false'); label(b); }
+    function status(b, msg) { var s = b.parentNode.querySelector('.dstatus'); if (s) s.textContent = msg || ''; }
+    function stop() {
+      audio.onerror = null; audio.onended = null; audio.pause();
+      if (cur) { setState(cur, 'idle'); cur = null; }
+    }
+    function start(b) {
+      stop();
+      var list = [b.getAttribute('data-src'), b.getAttribute('data-remote')].filter(Boolean), i = 0;
+      cur = b; status(b, ''); setState(b, 'play');
+      audio.onended = function () { if (cur === b) { setState(b, 'idle'); cur = null; } };
+      function next() {
+        var idx = i++;
+        if (idx >= list.length) { audio.onerror = null; setState(b, 'idle'); cur = null; status(b, tr('d.noaudio')); return; }
+        var done = false;
+        function fail() { if (done) return; done = true; if (cur === b) next(); }
+        audio.onerror = fail;
+        audio.src = list[idx];
+        var p = audio.play();
+        if (p && p.catch) p.catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          if (err && err.name === 'NotAllowedError') { done = true; setState(b, 'idle'); cur = null; return; }
+          fail();
+        });
+      }
+      next();
+    }
+    btns.forEach(function (b) {
+      setState(b, 'idle');
+      b.addEventListener('click', function () { if (cur === b) stop(); else start(b); });
+    });
+    d.addEventListener('zeera:lang', function () {
+      btns.forEach(label);
+      btns.forEach(function (b) { var s = b.parentNode.querySelector('.dstatus'); if (s && s.textContent) s.textContent = tr('d.noaudio'); });
+    });
+  });
+
   /* apply the chosen language last, so every block above can react to it */
   apply(false);
 })();
