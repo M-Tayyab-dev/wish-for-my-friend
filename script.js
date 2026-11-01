@@ -362,7 +362,50 @@
     var btn = $('#diyaBtn');
     if (!btn) return;
     var box = $('#diyas'), cnt = $('#diyaCount'), n = 0, MAX = 60;
-    try { n = Math.min(parseInt(localStorage.getItem('zeera-diyas') || '0', 10) || 0, MAX); } catch (e) {}
+    var MAGH = window.ZEERA_MAGH || [];
+    var now = $('#nowDua'), voice = new Audio(), tok = 0, curIdx = -1;
+    voice.preload = 'none';
+    try { n = parseInt(localStorage.getItem('zeera-diyas') || '0', 10) || 0; } catch (e) {}
+    function renderNow() {
+      if (curIdx < 0 || !MAGH.length) return;
+      var m = MAGH[curIdx], k = curIdx + 1;
+      $('#nowLabel').textContent = tr('d.nowlabel').replace('{n}', digits(k)).replace('{t}', digits(MAGH.length));
+      $('#nowAr').textContent = m.ar;
+      $('#nowTl').textContent = m.tl;
+      $('#nowMn').textContent = tr('d.m' + k + 'm');
+      $('#nowSrc').textContent = tr('d.m' + k + 's');
+      var st = $('#nowStatus'); if (st.textContent) st.textContent = tr('d.noaudio');
+    }
+    /* each tap plays the next forgiveness prayer, so no two taps in a row repeat */
+    function speak(idx) {
+      var m = MAGH[idx];
+      if (!m) return;
+      d.dispatchEvent(new CustomEvent('zeera:voice', { detail: 'diya' }));
+      curIdx = idx;
+      now.hidden = false;
+      now.classList.remove('pop'); void now.offsetWidth; now.classList.add('pop');
+      $('#nowStatus').textContent = '';
+      renderNow();
+      var my = ++tok, list = [m.src, m.remote], i = 0;
+      voice.onerror = null; voice.pause();
+      function next() {
+        if (my !== tok) return;
+        var j = i++;
+        if (j >= list.length) { voice.onerror = null; $('#nowStatus').textContent = tr('d.noaudio'); return; }
+        var done = false;
+        function fail() { if (done || my !== tok) return; done = true; next(); }
+        voice.onerror = fail;
+        voice.src = list[j];
+        var p = voice.play();
+        if (p && p.catch) p.catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          if (err && err.name === 'NotAllowedError') { done = true; return; }
+          fail();
+        });
+      }
+      next();
+    }
+    d.addEventListener('zeera:voice', function (e) { if (e.detail !== 'diya') { tok++; voice.onerror = null; voice.pause(); } });
     var SVG = '<svg viewBox="0 0 60 60" aria-hidden="true"><g transform="translate(30,37)"><g class="flame" style="--k:K"><circle cx="0" cy="-9" r="15" fill="rgba(246,168,28,.28)"/><path d="M0 0 C-6 -7 -4 -15 0 -22 C4 -15 6 -7 0 0Z" fill="#f6a81c"/><path d="M0 -1 C-2.5 -5 -1.5 -9 0 -13 C1.5 -9 2.5 -5 0 -1Z" fill="#fff3c4"/></g></g><path d="M8 40 C8 51 18 57 30 57 C42 57 52 51 52 40 Z" fill="#c4622d"/><ellipse cx="30" cy="40" rx="22" ry="4.5" fill="#e08a4a"/><ellipse cx="30" cy="40.5" rx="17" ry="2.6" fill="#7a3411"/></svg>';
     function add(delay) {
       var s = d.createElement('div'); s.className = 'diya';
@@ -371,14 +414,15 @@
       box.appendChild(s);
     }
     function label() { cnt.textContent = n ? tr('d.count').replace('{n}', digits(n)) : tr('d.zero'); }
-    for (var i = 0; i < n; i++) add(i * 60);
+    for (var i = 0; i < Math.min(n, MAX); i++) add(i * 60);
     btn.addEventListener('click', function () {
-      if (n >= MAX) return;
-      n++; add(0);
+      n++;
+      if (box.children.length < MAX) add(0);
       try { localStorage.setItem('zeera-diyas', String(n)); } catch (e) {}
       label();
+      speak((n - 1) % (MAGH.length || 1));
     });
-    d.addEventListener('zeera:lang', label);
+    d.addEventListener('zeera:lang', function () { label(); renderNow(); });
     label();
   });
 
@@ -453,6 +497,7 @@
     if (!btns.length) return;
     var audio = new Audio(); audio.preload = 'none';
     var cur = null;
+    d.addEventListener('zeera:voice', function (e) { if (e.detail !== 'dplay') stop(); });
     function label(b) { $('.dlabel', b).textContent = tr(b.getAttribute('data-state') === 'play' ? 'd.pause' : 'd.play'); }
     function setState(b, s) { b.setAttribute('data-state', s); b.setAttribute('aria-pressed', s === 'play' ? 'true' : 'false'); label(b); }
     function status(b, msg) { var s = b.parentNode.querySelector('.dstatus'); if (s) s.textContent = msg || ''; }
@@ -462,6 +507,7 @@
     }
     function start(b) {
       stop();
+      d.dispatchEvent(new CustomEvent('zeera:voice', { detail: 'dplay' }));
       var list = [b.getAttribute('data-src'), b.getAttribute('data-remote')].filter(Boolean), i = 0;
       cur = b; status(b, ''); setState(b, 'play');
       audio.onended = function () { if (cur === b) { setState(b, 'idle'); cur = null; } };

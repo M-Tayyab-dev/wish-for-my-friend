@@ -390,3 +390,8 @@ html[data-lang="ur"] .light-box p,html[data-lang="ur"] .meaning{line-height:2.1}
 html[dir="rtl"] .dplay .pi::before{rotate:180deg;translate:-2px 0}
 html[dir="rtl"] .dplay[data-state="play"] .pi::before{rotate:0deg;translate:0 0}
 html[data-lang="ur"] .music-hint{line-height:1.9}
+
+/* now-playing forgiveness prayer under the candle button */
+.nowdua{display:flex;flex-direction:column;gap:10px;width:100%;padding:clamp(20px,3vw,32px);border-radius:24px;background:var(--card);border:1px solid var(--turmeric)}
+.nowdua.pop{animation:msgPop .6s cubic-bezier(.3,1.6,.5,1) both}
+.nowdua .arabic{font-size:clamp(1.5rem,3.6vw,2.1rem)}
