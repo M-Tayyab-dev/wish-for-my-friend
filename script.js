@@ -357,34 +357,37 @@
     d.addEventListener('zeera:lang', function () { render(false); });
   });
 
-  /* ---------- dua page: light the diyas, one verse at a time ---------- */
+  /* ---------- dua page: 6 diyas, each click lights one and plays its dua ---------- */
   safe(function () {
     var btn = $('#diyaBtn');
     if (!btn) return;
     var box = $('#diyas'), cnt = $('#diyaCount'), lbl = $('#diyaBtnLabel');
     var MAGH = window.ZEERA_MAGH || [];
     var TOTAL = MAGH.length || 6;                 /* one diya per verse */
-    var now = $('#nowDua'), voice = new Audio(), tok = 0, timer = 0;
-    var idx = -1, lit = 0, state = 'idle', gap = false, retry = false;
-    /* idle -> playing -> (paused) -> done */
+    var now = $('#nowDua'), voice = new Audio(), tok = 0, idx = -1;
+    var on = [];
     voice.preload = 'none';
     try { localStorage.removeItem('zeera-diyas'); } catch (e) {}
 
     var SVG = '<svg viewBox="0 0 60 60" aria-hidden="true"><g transform="translate(30,37)"><g class="flame" style="--k:K"><circle cx="0" cy="-9" r="15" fill="rgba(246,168,28,.28)"/><path d="M0 0 C-6 -7 -4 -15 0 -22 C4 -15 6 -7 0 0Z" fill="#f6a81c"/><path d="M0 -1 C-2.5 -5 -1.5 -9 0 -13 C1.5 -9 2.5 -5 0 -1Z" fill="#fff3c4"/></g></g><path d="M8 40 C8 51 18 57 30 57 C42 57 52 51 52 40 Z" fill="#c4622d"/><ellipse cx="30" cy="40" rx="22" ry="4.5" fill="#e08a4a"/><ellipse cx="30" cy="40.5" rx="17" ry="2.6" fill="#7a3411"/></svg>';
     var diyas = [];
     for (var i = 0; i < TOTAL; i++) {
-      var s = d.createElement('div');
-      s.className = 'diya off';
-      s.innerHTML = SVG.replace('K', String(i % 5));
-      box.appendChild(s);
-      diyas.push(s);
+      (function (i) {
+        var s = d.createElement('button');
+        s.type = 'button'; s.className = 'diya off';
+        s.innerHTML = SVG.replace('K', String(i % 5));
+        s.addEventListener('click', function () { light(i); });
+        box.appendChild(s); diyas.push(s); on.push(false);
+      })(i);
     }
-
+    function litCount() { var c = 0; for (var i = 0; i < on.length; i++) if (on[i]) c++; return c; }
     function label() {
-      cnt.textContent = lit ? tr('d.count').replace('{n}', digits(lit)).replace('{t}', digits(TOTAL)) : tr('d.zero');
-      var key = state === 'playing' ? 'd.pause' : state === 'paused' ? 'd.resume' : state === 'done' ? 'd.again' : 'd.btn';
-      lbl.textContent = tr(key);
-      btn.setAttribute('aria-pressed', state === 'playing' ? 'true' : 'false');
+      var n = litCount();
+      cnt.textContent = n ? tr('d.count').replace('{n}', digits(n)).replace('{t}', digits(TOTAL)) : tr('d.zero');
+      lbl.textContent = tr(n >= TOTAL ? 'd.again' : 'd.btn');
+      for (var i = 0; i < TOTAL; i++) {
+        diyas[i].setAttribute('aria-label', tr('d.diya').replace('{n}', digits(i + 1)));
+      }
     }
     function renderNow() {
       if (idx < 0 || !MAGH.length) return;
@@ -396,84 +399,55 @@
       $('#nowSrc').textContent = tr('d.m' + k + 's');
       var st = $('#nowStatus'); if (st.textContent) st.textContent = tr('d.noaudio');
     }
-    function setState(s) { state = s; label(); }
-    function halt() { tok++; clearTimeout(timer); voice.onerror = null; voice.onended = null; voice.pause(); }
-
-    function resetDiyas() {
-      for (var i = 0; i < TOTAL; i++) diyas[i].className = 'diya off';
-      lit = 0; idx = -1; gap = false; retry = false;
-      now.hidden = true;
-    }
-
-    /* light diya i, show its verse, play it, then flow on to the next one */
-    function playVerse(i) {
+    function speak(i) {
       var m = MAGH[i];
-      if (!m) { finish(); return; }
+      if (!m) return;
       d.dispatchEvent(new CustomEvent('zeera:voice', { detail: 'diya' }));
-      halt();
-      var my = ++tok;
-      idx = i; gap = false; retry = false;
-      diyas[i].className = 'diya lit';
-      lit = i + 1;
+      idx = i;
       now.hidden = false;
       now.classList.remove('pop'); void now.offsetWidth; now.classList.add('pop');
       $('#nowStatus').textContent = '';
-      setState('playing');
       renderNow();
-
-      voice.onended = function () {
+      var my = ++tok, list = [m.src, m.remote], j = 0;
+      voice.onerror = null; voice.pause();
+      function next() {
         if (my !== tok) return;
-        voice.onended = null;
-        gap = true;
-        if (i + 1 < TOTAL) timer = setTimeout(function () { if (my === tok) playVerse(i + 1); }, 1100);
-        else timer = setTimeout(function () { if (my === tok) finish(); }, 600);
-      };
-      var list = [m.src, m.remote], j = 0;
-      function nextSrc() {
-        if (my !== tok) return;
-        if (j >= list.length) {
-          voice.onerror = null; retry = true;
-          $('#nowStatus').textContent = tr('d.noaudio');
-          setState('paused');
-          return;
-        }
+        if (j >= list.length) { voice.onerror = null; $('#nowStatus').textContent = tr('d.noaudio'); return; }
         var done = false;
-        function fail() { if (done || my !== tok) return; done = true; nextSrc(); }
+        function fail() { if (done || my !== tok) return; done = true; next(); }
         voice.onerror = fail;
         voice.src = list[j++];
         var p = voice.play();
         if (p && p.catch) p.catch(function (err) {
           if (err && err.name === 'AbortError') return;
-          if (err && err.name === 'NotAllowedError') { done = true; setState('paused'); return; }
+          if (err && err.name === 'NotAllowedError') { done = true; return; }
           fail();
         });
       }
-      nextSrc();
+      next();
     }
-
-    function finish() { gap = false; setState('done'); }
-    function pauseFlow() {
-      if (state !== 'playing') return;
-      clearTimeout(timer);
-      voice.pause();
-      setState('paused');
+    /* light diya i (if not lit yet) and play its dua; clicking a lit diya replays it */
+    function light(i) {
+      if (!on[i]) {
+        on[i] = true;
+        diyas[i].className = 'diya lit';
+      } else {
+        diyas[i].classList.remove('lit'); void diyas[i].offsetWidth; diyas[i].classList.add('lit');
+      }
+      label();
+      speak(i);
     }
-    function resumeFlow() {
-      d.dispatchEvent(new CustomEvent('zeera:voice', { detail: 'diya' }));
-      if (retry) { playVerse(idx); return; }
-      if (gap) { if (idx + 1 < TOTAL) playVerse(idx + 1); else finish(); return; }
-      setState('playing');
-      var p = voice.play();
-      if (p && p.catch) p.catch(function () { playVerse(idx); });
-    }
-
     btn.addEventListener('click', function () {
-      if (state === 'idle' || state === 'done') { halt(); resetDiyas(); playVerse(0); }
-      else if (state === 'playing') pauseFlow();
-      else resumeFlow();
+      if (litCount() >= TOTAL) {                  /* all lit: start over */
+        tok++; voice.pause();
+        for (var i = 0; i < TOTAL; i++) { on[i] = false; diyas[i].className = 'diya off'; }
+        idx = -1; now.hidden = true; label();
+        return;
+      }
+      var k = on.indexOf(false);                  /* next unlit diya */
+      light(k);
     });
-    /* another player on the page started: step aside */
-    d.addEventListener('zeera:voice', function (e) { if (e.detail !== 'diya') pauseFlow(); });
+    d.addEventListener('zeera:voice', function (e) { if (e.detail !== 'diya') { tok++; voice.onerror = null; voice.pause(); } });
     d.addEventListener('zeera:lang', function () { label(); renderNow(); });
     label();
   });

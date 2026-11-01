@@ -337,7 +337,9 @@ html[data-lang="ur"] .lang button[data-lang="ur"]{line-height:1.6}
 .light-box{display:flex;flex-direction:column;align-items:flex-start;gap:18px;max-width:760px}
 .light-box p{color:var(--muted)}
 .diyas{display:flex;flex-wrap:wrap;gap:10px clamp(8px,2.4vw,22px);min-height:80px;width:100%}
-.diya{width:clamp(56px,11vw,84px);animation:diyaIn .9s var(--ease) both;transition:filter .9s var(--ease)}
+.diya{appearance:none;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;width:clamp(56px,11vw,84px);animation:diyaIn .9s var(--ease) both;transition:filter .9s var(--ease)}
+.diya:hover svg{scale:1.06}.diya svg{transition:scale .25s var(--ease)}
+.diya:focus-visible{outline:2px solid var(--turmeric);outline-offset:4px;border-radius:12px}
 .diya.lit{filter:drop-shadow(0 0 14px rgba(246,168,28,.65))}
 .diya.lit svg{animation:ignite .9s cubic-bezier(.3,1.5,.5,1) both}
 .diya.off{filter:grayscale(.55) brightness(.5)}
