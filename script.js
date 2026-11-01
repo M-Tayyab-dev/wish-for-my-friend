@@ -396,28 +396,43 @@
       if (t0 > 0) a.addEventListener('loadedmetadata', function () { try { a.currentTime = t0 % (a.duration || t0 + 1); } catch (e) {} }, { once: true });
     } catch (e) {}
     function ui() {
-      var on = !a.paused && !off;
+      var on = !a.paused && !off && !a.muted;
       btn.classList.toggle('on', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.setAttribute('aria-label', tr(on ? 'm.off' : 'm.on'));
     }
     function save() { try { sessionStorage.setItem('zeera-mt', String(a.currentTime || 0)); } catch (e) {} }
     function remember(v) { try { localStorage.setItem('zeera-music', v); } catch (e) {} }
+    /* autoplay was blocked: keep the track running silently, so the first tap can unmute it at once */
+    function blocked() {
+      hint.hidden = false;
+      a.muted = true;
+      var q = a.play(); if (q && q.catch) q.catch(function () {});
+      ui();
+    }
     function tryPlay() {
       if (off) return;
+      a.muted = false;
       var p = a.play();
-      if (p && p.then) p.then(function () { hint.hidden = true; unbind(); ui(); }).catch(function () { hint.hidden = false; ui(); });
+      if (p && p.then) p.then(function () {
+        setTimeout(function () {
+          if (!a.paused && !a.muted) { hint.hidden = true; unbind(); }
+          else if (!off) blocked();
+          ui();
+        }, 250);
+      }).catch(blocked);
     }
     function unlock(e) {
       if (e.target && e.target.closest && e.target.closest('#music')) return;
       tryPlay();
     }
-    var evs = ['pointerdown', 'keydown', 'touchstart'];
+    /* only events browsers accept as a real user gesture (touchstart and touch pointerdown are not) */
+    var evs = ['click', 'pointerup', 'mousedown', 'touchend', 'keydown'];
     function bind() { evs.forEach(function (n) { d.addEventListener(n, unlock, { passive: true }); }); }
     function unbind() { evs.forEach(function (n) { d.removeEventListener(n, unlock); }); }
     btn.addEventListener('click', function () {
       unbind(); hint.hidden = true;
-      if (a.paused) { off = false; remember('on'); var p = a.play(); if (p && p.catch) p.catch(function () {}); }
+      if (a.paused || a.muted) { off = false; remember('on'); a.muted = false; var p = a.play(); if (p && p.catch) p.catch(function () {}); }
       else { off = true; remember('off'); a.pause(); }
       ui();
     });
